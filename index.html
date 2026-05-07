@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en" class="dark theme-blue">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NOVA">
+    <title>NOVA by Aravind - Ultimate Spatial IDE</title>
+
+    <!-- Refined Minimalist Apple App Icon -->
+    <script>
+        (function() {
+            const svgData = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>
+                <defs>
+                    <radialGradient id='glow' cx='50%' cy='50%' r='50%'>
+                        <stop offset='0%' stop-color='#0A84FF' stop-opacity='0.5'/>
+                        <stop offset='100%' stop-color='#0A84FF' stop-opacity='0'/>
+                    </radialGradient>
+                    <linearGradient id='glass' x1='0%' y1='0%' x2='100%' y2='100%'>
+                        <stop offset='0%' stop-color='#ffffff' stop-opacity='0.3'/>
+                        <stop offset='100%' stop-color='#ffffff' stop-opacity='0.02'/>
+                    </linearGradient>
+                </defs>
+                <rect width='512' height='512' fill='#050508'/>
+                <rect width='512' height='512' fill='url(#glow)'/>
+                <path d='M256 120 L300 212 L392 256 L300 300 L256 392 L212 300 L120 256 L212 212 Z' fill='url(#glass)' stroke='rgba(255,255,255,0.2)' stroke-width='4'/>
+                <circle cx='256' cy='256' r='30' fill='#ffffff' opacity='0.95'/>
+            </svg>`;
+            const svgUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgData);
+            const iconLink = document.createElement('link');
+            iconLink.rel = 'icon'; iconLink.type = 'image/svg+xml'; iconLink.href = svgUrl;
+            document.head.appendChild(iconLink);
+
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = "#000000";
+                ctx.fillRect(0, 0, 512, 512);
+                ctx.drawImage(img, 0, 0);
+                try {
+                    const pngUrl = canvas.toDataURL('image/png');
+                    const appleLink = document.createElement('link');
+                    appleLink.rel = 'apple-touch-icon'; appleLink.href = pngUrl;
+                    document.head.appendChild(appleLink);
+                    const manifest = {
+                        name: "NOVA Studio", short_name: "NOVA", start_url: window.location.href.split('?')[0] || ".", display: "standalone",
+                        background_color: "#000000", theme_color: "#000000",
+                        icons: [{ src: pngUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }]
+                    };
+                    const manifestLink = document.createElement('link');
+                    manifestLink.rel = 'manifest';
+                    manifestLink.href = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifest));
+                    document.head.appendChild(manifestLink);
+                } catch(e) {}
+            };
+            img.src = svgUrl;
+        })();
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Helvetica Neue"', 'sans-serif'], 
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'] 
+                    },
+                    colors: {
+                        apple: { blue: 'var(--sys-color)', bg: '#000000', text: '#FFFFFF', label: 'rgba(235, 235, 245, 0.65)' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --sys-color: #0A84FF; --glow-1: #0A84FF; --glow-2: #5E5CE6; --glow-3: #32ADE6; 
+            --spatial-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+            --spatial-spring: cubic-bezier(0.2, 0.8, 0.2, 1.05);
+            --spatial-bounce: cubic-bezier(0.34, 1.56, 0.64, 1); 
+            --editor-font-size: 16px; 
+            --editor-wrap: pre;
+            --sidebar-width: 280px;
+        }
+        .theme-blue { --sys-color: #0A84FF; --glow-1: #0A84FF; --glow-2: #5E5CE6; --glow-3: #32ADE6; }
+        .theme-purple { --sys-color: #BF5AF2; --glow-1: #BF5AF2; --glow-2: #FF375F; --glow-3: #5E5CE6; }
+        .theme-pink { --sys-color: #FF375F; --glow-1: #FF375F; --glow-2: #FF9F0A; --glow-3: #BF5AF2; }
+        .theme-orange { --sys-color: #FF9F0A; --glow-1: #FF9F0A; --glow-2: #FF375F; --glow-3: #FFD60A; }
+
+        /* Global Reset & Native Optimizations */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 0px; height: 0px; display: none; }
+        body { background-color: #000; color: #FFF; overflow: hidden; overscroll-behavior: none; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; perspective: 1200px; }
+
+        /* Splash Sequence */
+        #splash-screen { position: fixed; inset: 0; z-index: 99999; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s var(--spatial-ease), transform 1s var(--spatial-ease); }
+        .splash-logo { filter: drop-shadow(0 0 15px rgba(var(--sys-color-rgb), 0.5)); animation: pulseLogo 2s infinite alternate var(--spatial-ease); }
+        @keyframes pulseLogo { 0% { transform: scale(0.95); opacity: 0.8; } 100% { transform: scale(1.05); opacity: 1; } }
+
+        /* Ambient Liquid Environment */
+        .liquid-bg { position: fixed; inset: -15vw; z-index: 0; overflow: hidden; background: #030305; pointer-events: none; transition: transform 0.3s ease-out; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(140px); opacity: 0.15; animation: float 40s var(--spatial-ease) infinite alternate; will-change: transform; mix-blend-mode: screen; transform-style: preserve-3d; transition: background 1.5s var(--spatial-ease); }
+        .blob-1 { background: var(--glow-1); width: 85vw; height: 85vw; top: -10%; left: -20%; }
+        .blob-2 { background: var(--glow-2); width: 75vw; height: 75vw; bottom: -10%; right: -20%; animation-delay: -10s; }
+        .blob-3 { background: var(--glow-3); width: 65vw; height: 65vw; top: 15%; left: 30%; animation-delay: -20s; }
+        @keyframes float { 0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); } 50% { transform: translate3d(5vw, 8vh, 30px) scale(1.05) rotate(10deg); } 100% { transform: translate3d(-5vw, 4vh, -30px) scale(0.95) rotate(-5deg); } }
+
+        /* VisionOS Glass Materials */
+        .vision-glass { background: rgba(22, 22, 24, 0.65); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
+        .vision-well { background: rgba(8, 8, 10, 0.6); box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255,255,255,0.05); border-radius: 1.5rem; }
+
+        /* View Transitions */
+        .view-transition { transition: opacity 0.4s var(--spatial-ease), transform 0.6s var(--spatial-spring), filter 0.5s var(--spatial-ease); transform-origin: center center; }
+        .view-hidden { opacity: 0; transform: scale(0.96) translateZ(-50px); filter: blur(5px); pointer-events: none; position: absolute; inset: 0; z-index: -1; visibility: hidden; }
+        .view-active { opacity: 1; transform: scale(1) translateZ(0); filter: blur(0px); pointer-events: auto; position: absolute; inset: 0; z-index: 20; display: flex; visibility: visible; }
+        @keyframes slideUpZ { from { opacity: 0; transform: translateY(15px) translateZ(-20px) scale(0.98); } to { opacity: 1; transform: translateY(0) translateZ(0) scale(1); } }
+        .animate-stagger { opacity: 0; animation: slideUpZ 0.8s var(--spatial-spring) forwards; }
+        @keyframes savePulse { 0% { box-shadow: inset 0 1.5px 0 var(--sys-color); background: rgba(255,255,255,0.05); } 100% { box-shadow: inset 0 0 0 transparent; background: transparent; } }
+        .saving-pulse { animation: savePulse 0.8s var(--spatial-ease); }
+
+        /* Optimized Editor Core (Min-Height 0 fixes Safari blowouts) */
+        .editor-container { position: relative; width: 100%; height: 100%; overflow: hidden; z-index: 10; border-radius: inherit; display: flex; min-height: 0; min-width: 0; }
+        
+        .editor-textarea, .editor-pre, #line-numbers {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important; 
+            font-size: var(--editor-font-size) !important; line-height: 1.75 !important; letter-spacing: 0px !important;
+            padding-top: 1.5rem !important; padding-bottom: 3rem !important;
+        }
+        .editor-textarea, .editor-pre {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            padding-left: 1.25rem !important; padding-right: 1.25rem !important;
+            margin: 0 !important; border: none !important; outline: none !important;
+            white-space: var(--editor-wrap) !important; word-spacing: normal !important; word-break: normal !important; overflow-wrap: normal !important;
+            tab-size: 2 !important; box-sizing: border-box !important; overflow: auto !important; -webkit-overflow-scrolling: touch;
+        }
+        #line-numbers { padding-right: 0.75rem !important; padding-left: 0.5rem !important; overflow-y: hidden !important; text-align: right; color: #6E6E73; min-height: 0; }
+        .editor-textarea { color: transparent; background: transparent; caret-color: var(--sys-color); z-index: 2; resize: none; touch-action: pan-y pan-x; }
+        .editor-textarea::selection { background-color: rgba(10, 132, 255, 0.25); color: transparent; border-radius: 4px; }
+        .editor-pre { z-index: 1; pointer-events: none; color: #FFFFFF; }
+        .active-line-bg { position: absolute; left: 0; right: 0; background: rgba(255,255,255,0.035); z-index: 0; pointer-events: none; transition: top 0.1s linear; border-top: 1px solid rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.02); height: 1.75em; }
+        
+        /* High Contrast Syntax */
+        .syn-keyword { color: #FF7AB2; font-weight: 600; text-shadow: 0 0 10px rgba(255,122,178,0.3); } 
+        .syn-string { color: #FFD60A; text-shadow: 0 0 10px rgba(255,214,10,0.2); } 
+        .syn-number { color: #32D74B; }
+        .syn-comment { color: #8E8E93; font-style: italic; } 
+        .syn-function { color: #5DD8FF; font-weight: 600; text-shadow: 0 0 10px rgba(93,216,255,0.3); }
+        .syn-tag { color: #5DD8FF; font-weight: 500; } 
+        .syn-attr { color: #E5C07B; } 
+        .syn-property { color: #D19A66; }
+
+        /* Command Palette */
+        .cmd-palette { background: rgba(30, 30, 35, 0.85); backdrop-filter: blur(60px) saturate(180%); -webkit-backdrop-filter: blur(60px) saturate(180%); border-radius: 20px; width: 600px; max-width: 90vw; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.2); transition: transform 0.4s var(--spatial-spring), opacity 0.3s var(--spatial-ease); }
+        .cmd-enter { transform: scale(1.05) translateZ(20px); opacity: 0; }
+        .cmd-active { transform: scale(1) translateZ(0); opacity: 1; }
+        .cmd-item { transition: all 0.2s var(--spatial-ease); cursor: pointer; }
+        .cmd-item.selected { background: rgba(10, 132, 255, 0.2); border-radius: 12px; }
+
+        /* Interactive Physics */
+        .vision-btn { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 9999px; color: #FFF; font-weight: 500; cursor: pointer; transition: all 0.3s var(--spatial-spring); transform-origin: center; display: inline-flex; align-items: center; justify-content: center; }
+        .vision-btn:hover { background: rgba(255, 255, 255, 0.15); transform: scale(1.04); border-color: rgba(255,255,255,0.1); }
+        .vision-btn:active { transform: scale(0.85); opacity: 0.6; transition: all 0.1s ease-out; }
+        .vision-btn-primary { background: var(--sys-color); border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 15px rgba(var(--sys-color-rgb), 0.3); }
+        .vision-btn-primary:hover { background: var(--sys-color); filter: brightness(1.15); transform: scale(1.04); box-shadow: 0 6px 20px rgba(var(--sys-color-rgb), 0.4); }
+        .vision-btn-primary:active { transform: scale(0.85); transition: all 0.1s ease-out; }
+        .vision-card { transition: all 0.4s var(--spatial-spring); cursor: pointer; user-select: none; -webkit-user-select: none; transform-style: preserve-3d; }
+        .vision-card:hover { transform: translateY(-5px) scale(1.015); box-shadow: 0 25px 50px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); background: rgba(40,40,45,0.6); }
+        .vision-card:active { transform: scale(0.97); filter: brightness(0.9); transition: all 0.1s ease-out; }
+        
+        .segmented-control { position: relative; background-color: rgba(0, 0, 0, 0.4); padding: 4px; border-radius: 9999px; display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.04); flex-shrink: 0; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+        .segmented-btn { position: relative; z-index: 2; padding: 6px 14px; border-radius: 9999px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.5); transition: all 0.4s var(--spatial-bounce); cursor: pointer; flex: 1; text-align: center; white-space: nowrap; transform-origin: center; }
+        @media (min-width: 1024px) { .segmented-btn { padding: 6px 18px; font-size: 13px; } }
+        .segmented-btn.active { color: #FFFFFF; font-weight: 600; }
+        .segmented-btn:active { transform: scale(0.88); transition: all 0.1s ease-out; }
+        .segment-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; background-color: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border-radius: 9999px; transition: transform 0.5s var(--spatial-bounce), width 0.5s var(--spatial-bounce); box-shadow: 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.05); z-index: 1; }
+        
+        .url-bar-bounce { transition: all 0.5s var(--spatial-bounce); cursor: pointer; transform-origin: center; }
+        .url-bar-bounce:hover { transform: scale(1.02); background: rgba(0,0,0,0.8); }
+        .url-bar-bounce:active { transform: scale(0.92); opacity: 0.8; transition: all 0.1s ease-out; }
+
+        .sidebar-resizer { position: absolute; right: -5px; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 60; transition: background 0.3s; }
+        .sidebar-resizer:hover, .sidebar-resizer.active { background: rgba(255,255,255,0.05); }
+
+        #resizer { width: 44px; margin-left: -22px; margin-right: -22px; cursor: col-resize; background: transparent; position: relative; z-index: 30; display: flex; justify-content: center; align-items: center; touch-action: none; flex-shrink: 0; }
+        #resizer .resizer-line { width: 4px; height: 48px; background: rgba(255,255,255,0.1); border-radius: 999px; transition: all 0.3s var(--spatial-spring); pointer-events: none; }
+        #resizer:hover .resizer-line { background: rgba(255,255,255,0.3); height: 56px; }
+        #resizer:active .resizer-line, #resizer.dragging .resizer-line { background: var(--sys-color); transform: scaleX(1.5); height: 100%; box-shadow: 0 0 15px var(--sys-color); border-color: transparent; }
+        
+        /* Modals & Overlays */
+        .modal-backdrop { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(0,0,0,0.6); transition: opacity 0.3s var(--spatial-ease); }
+        .vision-alert-box { background: rgba(30, 30, 35, 0.85); backdrop-filter: blur(50px) saturate(200%); -webkit-backdrop-filter: blur(50px) saturate(200%); border-radius: 24px; width: 320px; max-width: 90vw; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.2); transition: transform 0.5s var(--spatial-bounce), opacity 0.3s var(--spatial-ease); }
+        .modal-enter { transform: scale(1.05); opacity: 0; }
+        .modal-active { transform: scale(1); opacity: 1; }
+        
+        #drop-zone { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s var(--spatial-ease); }
+        #drop-zone.active { opacity: 1; pointer-events: auto; }
+        
+        /* Viewports */
+        .viewport-container { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; transition: padding 0.5s var(--spatial-spring); min-height: 0; min-width: 0; }
+        .viewport-mobile iframe { max-width: 375px; max-height: 812px; border-radius: 40px; border: 12px solid #000; box-shadow: 0 20px 40px rgba(0,0,0,0.8); transition: all 0.5s var(--spatial-spring); }
+        .viewport-tablet iframe { max-width: 820px; max-height: 1180px; border-radius: 20px; border: 12px solid #000; box-shadow: 0 20px 40px rgba(0,0,0,0.8); transition: all 0.5s var(--spatial-spring); }
+        .viewport-desktop iframe { max-width: 100%; max-height: 100%; border-radius: 0; border: none; transition: all 0.5s var(--spatial-spring); }
+        .viewport-container:fullscreen { padding: 0; }
+        .viewport-container:fullscreen iframe { max-width: 100%; max-height: 100%; border-radius: 0; border: none; }
+        
+        /* Loading Bar */
+        .loader-bar { height: 2px; background: var(--sys-color); width: 30%; position: absolute; top: 0; left: -30%; animation: loadingSweep 1s var(--spatial-ease) infinite; z-index: 50; display: none; box-shadow: 0 0 10px var(--sys-color); border-radius: 0 2px 2px 0; }
+        @keyframes loadingSweep { 0% { left: -30%; width: 0%; } 50% { width: 40%; } 100% { left: 100%; width: 10%; } }
+
+        #console-input:focus { border-color: var(--sys-color); background: rgba(255,255,255,0.05); }
+        .lucide { stroke-width: 1.5 !important; }
+
+        .toast-pill { transform: translateY(-150%) scale(0.95); opacity: 0; transition: all 0.5s var(--spatial-bounce); }
+        .toast-active { transform: translateY(0) scale(1); opacity: 1; }
+
+        .proj-gradient-0 { background: linear-gradient(135deg, #0A84FF, #0055FF); }
+        .proj-gradient-1 { background: linear-gradient(135deg, #5E5CE6, #3E3CA6); }
+        .proj-gradient-2 { background: linear-gradient(135deg, #32ADE6, #227DA6); }
+        .proj-gradient-3 { background: linear-gradient(135deg, #FF9F0A, #BF7707); }
+        .proj-gradient-4 { background: linear-gradient(135deg, #FF375F, #BF2947); }
+    </style>
+</head>
+<body class="flex flex-col h-[100dvh] w-screen font-sans selection:bg-apple-blue/40 overflow-hidden min-h-0 min-w-0">
+
+    <div id="splash-screen">
+        <div class="splash-logo text-white text-4xl md:text-5xl font-extrabold tracking-tighter flex items-center gap-4">
+            <i data-lucide="sparkles" class="w-10 h-10 md:w-12 md:h-12 text-apple-blue"></i> NOVA
+        </div>
+        <p class="text-apple-label mt-4 font-medium text-sm md:text-base tracking-widest uppercase">By Aravind</p>
+    </div>
+
+    <div class="liquid-bg" id="liquid-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div id="drop-zone">
+        <div class="vision-glass rounded-[2rem] p-10 flex flex-col items-center scale-95 transition-transform duration-300" id="drop-box">
+            <div class="w-16 h-16 rounded-full bg-apple-blue/20 flex items-center justify-center mb-4 shadow-[0_0_20px_var(--sys-color)] border border-white/10">
+                <i data-lucide="cloud-download" class="w-8 h-8 text-apple-blue animate-bounce"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-2 tracking-tight text-center">Drop to Import</h2>
+            <p class="text-apple-label text-[15px] text-center">Instantly mounts to your workspace.</p>
+        </div>
+    </div>
+
+    <div id="cmd-palette-overlay" class="hidden fixed inset-0 modal-backdrop z-[200] flex items-start justify-center pt-[15vh] opacity-0 transition-opacity duration-300">
+        <div id="cmd-palette-box" class="cmd-palette cmd-enter flex flex-col relative">
+            <div class="flex items-center px-5 py-4 border-b border-white/10">
+                <i data-lucide="search" class="w-5 h-5 text-apple-label mr-3"></i>
+                <input type="text" id="cmd-input" class="bg-transparent border-none text-white text-[16px] w-full outline-none font-medium placeholder-white/30" placeholder="Search files or run commands..." autocomplete="off" spellcheck="false">
+                <div class="px-2 py-1 rounded bg-white/10 text-apple-label text-[10px] font-bold tracking-widest ml-2 border border-white/10">ESC</div>
+            </div>
+            <div id="cmd-results" class="max-h-[350px] overflow-y-auto py-2 px-2 flex flex-col gap-1"></div>
+        </div>
+    </div>
+
+    <div class="absolute inset-0 flex flex-col overflow-hidden bg-transparent perspective-[1200px] opacity-0 transition-opacity duration-1000 min-h-0 min-w-0" id="main-app">
+        
+        <!-- HOME DASHBOARD -->
+        <div id="home-view" class="view-transition view-active flex flex-col px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:p-6 lg:p-8 min-h-0 min-w-0">
+            <header class="vision-glass rounded-full h-[60px] flex-shrink-0 flex items-center justify-between px-5 z-40 w-full max-w-6xl mx-auto mt-2 md:mt-0">
+                <div class="flex items-center gap-3 flex-shrink-0 min-w-0">
+                    <div class="w-8 h-8 rounded-[8px] bg-apple-blue flex items-center justify-center shadow-[0_0_10px_var(--sys-color)] border border-white/20 flex-shrink-0">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <span class="font-bold text-[18px] sm:text-[20px] tracking-tight text-white truncate hidden sm:block">NOVA</span>
+                </div>
+                <div class="flex items-center gap-3 md:gap-4 flex-shrink-0">
+                    <div class="hidden md:flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-full border border-white/10">
+                        <button onclick="setTheme('blue')" class="w-4 h-4 rounded-full bg-[#0A84FF] vision-btn border-none p-0"></button>
+                        <button onclick="setTheme('purple')" class="w-4 h-4 rounded-full bg-[#BF5AF2] vision-btn border-none p-0"></button>
+                        <button onclick="setTheme('pink')" class="w-4 h-4 rounded-full bg-[#FF375F] vision-btn border-none p-0"></button>
+                        <button onclick="setTheme('orange')" class="w-4 h-4 rounded-full bg-[#FF9F0A] vision-btn border-none p-0"></button>
+                    </div>
+                    <div class="h-9 w-9 rounded-full bg-[#2C2C2E] border border-white/20 flex items-center justify-center shadow-md vision-btn p-0 cursor-default" title="Developed by Aravind">
+                        <span class="text-white font-bold text-[11px] tracking-wider">AR</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto touch-pan-y pt-8 pb-10 relative bg-transparent w-full max-w-6xl mx-auto min-h-0 min-w-0">
+                <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 sm:gap-6 animate-stagger" style="animation-delay: 0.1s">
+                    <div class="flex-1 min-w-0">
+                        <h1 class="text-[32px] md:text-[44px] font-bold text-white tracking-tight leading-tight mb-1 truncate">Workspaces</h1>
+                        <p class="text-apple-label text-[14px] md:text-[16px] font-medium truncate">Your local spatial environments.</p>
+                        <div class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg vision-glass border-white/10 shadow-none cursor-default">
+                            <i data-lucide="code-2" class="w-3.5 h-3.5 text-apple-blue"></i>
+                            <span class="text-[11px] sm:text-[12px] font-medium text-apple-label">Developed by <span class="text-white font-bold tracking-wide uppercase">Aravind</span></span>
+                        </div>
+                    </div>
+                    <button onclick="UI.showNewProjectModal()" class="vision-btn vision-btn-primary px-5 py-3 gap-2 w-full sm:w-auto text-[14px] sm:text-[15px] flex-shrink-0">
+                        <i data-lucide="plus" class="w-4 h-4"></i> New Workspace
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5" id="home-project-grid"></div>
+            </div>
+        </div>
+
+        <!-- IDE SPATIAL WORKSPACE -->
+        <div id="ide-view" class="view-transition view-hidden z-30 absolute inset-0 flex flex-col md:flex-row md:gap-4 lg:gap-6 md:p-4 lg:p-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] min-h-0 min-w-0">
+            
+            <!-- Mobile Header -->
+            <header class="md:hidden h-[56px] flex-shrink-0 flex items-center justify-between px-3 z-40 border-b border-white/10 relative vision-glass rounded-none w-full min-w-0">
+                <div class="flex items-center gap-1 flex-1 min-w-0">
+                    <button onclick="UI.switchView('home')" class="vision-btn w-9 h-9 p-0 rounded-full flex-shrink-0 border-none bg-white/5"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                    <button onclick="UI.toggleMobileSidebar()" class="vision-btn w-9 h-9 p-0 rounded-full flex-shrink-0 border-none bg-white/5"><i data-lucide="sidebar" class="w-4.5 h-4.5"></i></button>
+                    <span id="mobile-project-title" class="text-[14px] font-bold text-white truncate px-2 min-w-0">Loading...</span>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <button onclick="UI.toggleSettings()" class="vision-btn w-9 h-9 p-0 rounded-full flex-shrink-0 border-none bg-white/5"><i data-lucide="settings" class="w-4 h-4"></i></button>
+                    <button id="run-btn-mobile" disabled class="vision-btn p-1.5 px-2.5 text-apple-blue opacity-50 font-bold gap-1 text-[13px] flex-shrink-0 border-none bg-transparent"><i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i></button>
+                    <button onclick="UI.toggleMobileView()" class="vision-btn w-9 h-9 p-0 rounded-full flex-shrink-0 border-none bg-white/5"><i data-lucide="arrow-left-right" class="w-4 h-4"></i></button>
+                </div>
+            </header>
+
+            <!-- Sidebar Island -->
+            <aside id="sidebar" class="absolute md:relative w-[85vw] max-w-[320px] md:max-w-none h-full flex-shrink-0 flex flex-col vision-glass md:rounded-[1.5rem] lg:rounded-[2rem] z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] min-h-0 min-w-0" style="width: var(--sidebar-width);">
+                <div id="sidebar-resizer" class="sidebar-resizer hidden md:block"></div>
+                <div class="px-4 lg:px-5 pt-4 lg:pt-5 pb-3 flex justify-between items-center border-b border-white/5 min-w-0 flex-shrink-0">
+                    <button onclick="UI.switchView('home')" class="hidden md:flex vision-btn w-8 h-8 p-0 rounded-full hover:bg-white/10 border-none flex-shrink-0" title="Home"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
+                    <span class="text-[13px] lg:text-[14px] font-bold text-white tracking-tight uppercase hidden md:block truncate px-2">Files</span>
+                    <span class="text-[15px] font-bold text-white tracking-tight md:hidden">Explorer</span>
+                    <div class="flex gap-1.5 flex-shrink-0">
+                        <button onclick="Workspace.createFile()" class="vision-btn w-8 h-8 p-0 rounded-full border-none bg-white/5 hover:bg-white/10"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                        <button onclick="UI.toggleMobileSidebar()" class="md:hidden vision-btn w-8 h-8 p-0 rounded-full border-none bg-white/5"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+                <div id="file-list" class="flex-1 overflow-y-auto touch-pan-y px-3 space-y-1 pt-3 pb-4 min-w-0 min-h-0"></div>
+                <div class="p-4 border-t border-white/5 bg-black/10 pb-[max(1rem,env(safe-area-inset-bottom))] min-w-0 flex-shrink-0">
+                    <div class="flex items-center gap-2.5 cursor-default truncate opacity-80">
+                        <div class="w-6 h-6 rounded-full bg-[#1C1C1E] flex items-center justify-center border border-white/10 flex-shrink-0"><span class="text-[8px] font-extrabold text-white tracking-widest">AR</span></div>
+                        <span class="text-[11px] text-apple-label font-medium truncate">Crafted by <span class="text-white font-bold tracking-wide">Aravind</span></span>
+                    </div>
+                </div>
+            </aside>
+            <div id="sidebar-overlay" onclick="UI.toggleMobileSidebar()" class="absolute inset-0 bg-black/50 z-40 hidden md:hidden backdrop-blur-sm transition-opacity opacity-0"></div>
+
+            <!-- Workspace Island -->
+            <main class="flex-1 flex flex-col min-w-0 md:rounded-[1.5rem] lg:rounded-[2rem] vision-glass overflow-hidden z-10 relative min-h-0">
+                
+                <!-- Desktop Header -->
+                <header class="hidden md:flex h-[56px] lg:h-[60px] flex-shrink-0 items-center px-3 lg:px-4 border-b border-white/5 bg-black/20 w-full min-w-0 relative">
+                    <div class="flex-1 flex items-center min-w-0 gap-2 pr-2 overflow-hidden">
+                        <button onclick="UI.toggleDesktopSidebar()" class="vision-btn w-8 h-8 p-0 rounded-full flex-shrink-0 border-none bg-transparent hover:bg-white/10" title="Toggle Sidebar"><i data-lucide="sidebar" class="w-4 h-4"></i></button>
+                        <span id="ide-project-title" class="text-[13px] lg:text-[15px] font-semibold text-white truncate">Loading...</span>
+                    </div>
+                    <div class="flex-shrink-0 flex items-center justify-center px-2 absolute left-1/2 transform -translate-x-1/2 z-10">
+                        <div class="segmented-control" id="main-segments">
+                            <div id="segment-pill" class="segment-pill"></div>
+                            <button onclick="UI.setViewMode('editor')" id="btn-view-editor" class="segmented-btn active">Code</button>
+                            <button onclick="UI.setViewMode('split')" id="btn-view-split" class="segmented-btn">Split</button>
+                            <button onclick="UI.setViewMode('preview')" id="btn-view-preview" class="segmented-btn">Preview</button>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex items-center justify-end min-w-0 gap-1.5 lg:gap-2 pl-2 overflow-hidden z-10">
+                        <button onclick="Workspace.exportProject()" class="vision-btn w-8 h-8 p-0 rounded-full flex-shrink-0 bg-apple-blue/10 text-apple-blue border-none" title="Export Full Project"><i data-lucide="download-cloud" class="w-4 h-4"></i></button>
+                        <div class="hidden xl:flex items-center justify-center px-2.5 py-1 rounded-full bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 flex-shrink-0 transition-colors" onclick="CommandPalette.show()" title="Command Palette (Cmd K)"><i data-lucide="search" class="w-3.5 h-3.5 text-apple-label"></i><span class="text-[10px] font-bold text-apple-label ml-1.5">Cmd K</span></div>
+                        <button class="flex xl:hidden vision-btn w-8 h-8 p-0 rounded-full flex-shrink-0 border-none bg-transparent hover:bg-white/10" onclick="CommandPalette.show()" title="Search"><i data-lucide="search" class="w-4 h-4 text-apple-label"></i></button>
+                        <button onclick="UI.toggleSettings()" class="vision-btn w-8 h-8 p-0 rounded-full flex-shrink-0 border-none bg-transparent hover:bg-white/10" title="Settings"><i data-lucide="settings" class="w-4 h-4 text-apple-label"></i></button>
+                        <div class="w-px h-4 bg-white/10 mx-1 hidden lg:block flex-shrink-0"></div>
+                        <label class="hidden lg:flex items-center gap-1.5 text-[12px] font-medium text-apple-label cursor-pointer flex-shrink-0 pl-1 hover:text-white transition-colors"><input type="checkbox" id="auto-run-toggle" checked class="accent-apple-blue w-3.5 h-3.5"><span>Sync</span></label>
+                        <button id="run-btn" disabled class="vision-btn px-3 py-1.5 text-apple-blue opacity-50 font-bold gap-1.5 text-[12px] flex-shrink-0 border-none bg-transparent"><i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i><span>Build</span></button>
+                    </div>
+                </header>
+
+                <div id="workspace-container" class="flex-1 flex flex-col md:flex-row min-w-0 min-h-0 w-full relative p-0 md:p-3 lg:p-4 gap-0 md:gap-3 lg:gap-4">
+                    
+                    <!-- Editor Well -->
+                    <section id="editor-section" class="flex flex-col min-w-0 min-h-0 w-full md:w-1/2 h-full z-10 vision-well relative md:rounded-xl overflow-hidden border-b border-white/5 md:border-none flex-1">
+                        <div class="flex items-center justify-between bg-black/40 border-b border-black h-[44px] w-full min-w-0 shadow-sm md:rounded-t-xl flex-shrink-0">
+                            <div id="editor-tabs" class="flex items-center h-full flex-1 min-w-0 gap-0.5 pl-1 overflow-x-auto touch-pan-x scrollbar-hide z-20"></div>
+                            <div class="flex items-center gap-1 px-2 border-l border-white/5 bg-black/20 h-full flex-shrink-0 z-30">
+                                <button onclick="UI.toggleWrap(document.getElementById('wrap-toggle-hidden'))" class="vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 text-apple-label hover:text-white flex-shrink-0" title="Toggle Word Wrap"><i data-lucide="wrap-text" class="w-3.5 h-3.5"></i></button>
+                                <input type="checkbox" id="wrap-toggle-hidden" class="hidden" onchange="UI.toggleWrap(this)">
+                                <button onclick="UI.formatCode()" class="vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 text-yellow-400 flex-shrink-0" title="Format Code"><i data-lucide="wand-2" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="Workspace.copyContent()" class="vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 text-apple-label hover:text-white flex-shrink-0" title="Copy Current File"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="Workspace.downloadCurrentFile()" class="hidden md:flex vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 text-apple-label hover:text-white flex-shrink-0" title="Download Current File"><i data-lucide="download" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex-1 flex overflow-hidden relative editor-container md:rounded-b-xl min-h-0 min-w-0" id="editor-wrapper">
+                            <div id="active-line-highlight" class="active-line-bg h-[1.75em] hidden"></div>
+                            <div id="line-numbers" class="w-10 lg:w-12 flex-shrink-0 flex flex-col items-end pr-2 py-[1.5rem] text-[12px] font-mono select-none text-[#5C5C5E] bg-[#0A0A0C] border-r border-white/5 z-10 leading-[1.75]"></div>
+                            <div class="relative flex-1 h-full overflow-hidden bg-[#0A0A0C] min-h-0 min-w-0">
+                                <pre id="editor-pre" class="editor-pre" aria-hidden="true"></pre>
+                                <textarea id="code-editor" class="editor-textarea" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Splitter -->
+                    <div id="resizer" class="hidden md:flex flex-shrink-0"><div class="resizer-line"></div></div>
+
+                    <!-- Preview Well -->
+                    <section id="preview-section" class="flex flex-col min-w-0 min-h-0 w-full md:w-1/2 h-full relative z-10 hidden md:flex vision-well md:rounded-xl overflow-hidden flex-1">
+                        <div id="loader" class="loader-bar md:rounded-tl-xl"></div>
+                        <div class="h-[44px] bg-black/40 flex items-center justify-between border-b border-black z-20 w-full min-w-0 shadow-sm md:rounded-t-xl px-2 flex-shrink-0">
+                            <div class="flex items-center gap-0.5 w-auto min-w-0 flex-shrink-0">
+                                <button onclick="Preview.setViewport('mobile')" id="vp-mobile" class="vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 flex-shrink-0 text-apple-label hover:text-white" title="iPhone"><i data-lucide="smartphone" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="Preview.setViewport('tablet')" id="vp-tablet" class="vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 flex-shrink-0 text-apple-label hover:text-white" title="iPad"><i data-lucide="tablet" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="Preview.setViewport('desktop')" id="vp-desktop" class="vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-apple-blue/20 text-apple-blue hidden xl:flex flex-shrink-0" title="Mac"><i data-lucide="monitor" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                            <div class="flex-1 min-w-[120px] max-w-[250px] mx-2 flex justify-center">
+                                <div class="w-full bg-black/60 border border-white/5 rounded-full h-6 flex items-center justify-between px-3 gap-1.5 url-bar-bounce shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)] truncate">
+                                    <div class="flex items-center gap-1.5 truncate flex-1" onclick="Engine.run()">
+                                        <i data-lucide="lock" class="w-2.5 h-2.5 text-apple-blue opacity-80 flex-shrink-0"></i>
+                                        <span class="text-[11px] font-medium text-white/80 truncate">nova.local</span>
+                                    </div>
+                                    <button onclick="Engine.run()" class="ios-btn text-apple-label hover:text-white p-0.5 -mr-1 flex-shrink-0" title="Refresh Preview"><i data-lucide="rotate-cw" class="w-2.5 h-2.5"></i></button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-end gap-0.5 w-auto min-w-0 flex-shrink-0">
+                                <button onclick="Workspace.exportProject()" class="md:hidden vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none text-apple-blue bg-apple-blue/10 flex-shrink-0" title="Export Project"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="Preview.toggleFullscreen()" class="vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 flex-shrink-0 text-apple-label hover:text-white" title="Fullscreen"><i data-lucide="maximize" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="Workspace.openNewTab()" class="vision-btn w-7 h-7 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 flex-shrink-0 text-apple-blue" title="Open in Safari"><i data-lucide="compass" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex-1 relative overflow-hidden bg-transparent min-h-0 min-w-0" id="iframe-wrapper">
+                            <div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: linear-gradient(45deg, #FFF 25%, transparent 25%), linear-gradient(-45deg, #FFF 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #FFF 75%), linear-gradient(-45deg, transparent 75%, #FFF 75%); background-size: 20px 20px;"></div>
+                            <div id="viewport-container" class="viewport-container viewport-desktop relative">
+                                <iframe id="preview-frame" sandbox="allow-scripts allow-modals allow-same-origin" class="w-full h-full bg-[#121212] transition-all duration-300"></iframe>
+                            </div>
+                        </div>
+                        
+                        <!-- Console Output -->
+                        <div class="h-[35%] min-h-[120px] max-h-[60%] flex flex-col bg-black/60 border-t border-black relative z-20 flex-shrink-0">
+                            <div class="absolute top-0 left-0 w-full h-2 cursor-row-resize -mt-1 z-10"></div>
+                            <div class="flex justify-between items-center px-4 py-1.5 border-b border-white/5 bg-black/40 flex-shrink-0">
+                                <div class="flex items-center gap-1.5"><i data-lucide="terminal-square" class="w-3.5 h-3.5 text-apple-label"></i><span class="text-[10px] text-apple-label font-bold tracking-widest uppercase">Console</span></div>
+                                <button onclick="Engine.clearConsole()" class="vision-btn w-6 h-6 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 text-apple-label hover:text-white flex-shrink-0"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            </div>
+                            <div id="console-output" class="flex-1 overflow-y-auto touch-pan-y p-2.5 font-mono text-[11px] leading-relaxed flex flex-col gap-1 bg-[#0A0A0C] shadow-[inset_0_5px_10px_rgba(0,0,0,0.5)] min-h-0 pb-10"></div>
+                            
+                            <!-- Interactive Console Input -->
+                            <div class="h-9 bg-[#121212] border-t border-white/5 flex items-center px-3 absolute bottom-0 left-0 right-0 z-10">
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-apple-blue mr-2 opacity-70 flex-shrink-0"></i>
+                                <input type="text" id="console-input" class="bg-transparent border-none text-white text-[12px] w-full outline-none font-mono placeholder-white/30" placeholder="Evaluate JS..." autocomplete="off" spellcheck="false">
+                                <button onclick="UI.executeConsole()" class="vision-btn w-6 h-6 p-0 rounded-md border-none shadow-none bg-apple-blue/20 hover:bg-apple-blue/40 text-apple-blue flex-shrink-0 ml-2" title="Run (Enter)"><i data-lucide="send" class="w-3 h-3"></i></button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div> <!-- End Main Wrapper -->
+
+    <!-- SPATIAL MODALS -->
+    <div id="new-project-overlay" class="hidden fixed inset-0 modal-backdrop z-[120] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div id="new-project-box" class="vision-alert-box modal-content modal-enter flex flex-col relative w-[340px]" onclick="event.stopPropagation()">
+            <div class="p-5 border-b border-white/10 flex justify-between items-center">
+                <h3 class="text-[17px] font-bold text-white tracking-tight flex items-center gap-2"><i data-lucide="folder-plus" class="w-4.5 h-4.5 text-apple-blue"></i> New Workspace</h3>
+                <button onclick="UI.hideNewProjectModal()" class="vision-btn w-7 h-7 p-0 rounded-full bg-white/10 border-none shadow-none hover:bg-white/20"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="p-5 flex flex-col gap-4">
+                <div>
+                    <label class="text-[12px] text-apple-label font-bold tracking-widest uppercase mb-2 block">Name</label>
+                    <input type="text" id="new-proj-name" placeholder="Untitled App" autocomplete="off" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-[14px] text-white focus:outline-none focus:border-apple-blue transition-all shadow-[inset_0_2px_5px_rgba(0,0,0,0.5)]">
+                </div>
+                <div>
+                    <label class="text-[12px] text-apple-label font-bold tracking-widest uppercase mb-2 block">Template</label>
+                    <select id="new-proj-template" class="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white focus:outline-none focus:border-apple-blue transition-all shadow-[inset_0_2px_5px_rgba(0,0,0,0.5)] appearance-none cursor-pointer">
+                        <option value="vanilla">Vanilla Web (HTML/CSS/JS)</option>
+                        <option value="react">React.js (Babel CDN)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex border-t border-white/10 bg-white/5">
+                <button onclick="UI.hideNewProjectModal()" class="flex-1 py-3 text-[15px] text-apple-blue ios-btn border-r border-white/10 font-normal rounded-none bg-transparent shadow-none">Cancel</button>
+                <button onclick="Workspace.confirmCreateProject()" class="flex-1 py-3 text-[15px] font-bold text-apple-blue ios-btn rounded-none bg-transparent shadow-none">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-overlay" class="hidden fixed inset-0 modal-backdrop z-[120] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div id="settings-box" class="vision-alert-box modal-content modal-enter flex flex-col relative w-[340px]" onclick="event.stopPropagation()">
+            <div class="p-5 border-b border-white/10 flex justify-between items-center">
+                <h3 class="text-[17px] font-bold text-white tracking-tight flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-4.5 h-4.5 text-apple-blue"></i> Settings</h3>
+                <button onclick="UI.toggleSettings()" class="vision-btn w-7 h-7 p-0 rounded-full bg-white/10 border-none shadow-none hover:bg-white/20"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="p-5 flex flex-col gap-5">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-[14px] text-white font-medium">Font Size</p>
+                        <p class="text-[11px] text-apple-label">Adjust editor text scale</p>
+                    </div>
+                    <div class="flex items-center gap-2 bg-black/40 rounded-full px-2 py-1 border border-white/10">
+                        <button onclick="UI.changeFontSize(-1)" class="text-apple-blue hover:text-white px-1 py-1"><i data-lucide="minus" class="w-3.5 h-3.5"></i></button>
+                        <span id="font-size-display" class="text-white font-mono text-[13px] w-5 text-center">16</span>
+                        <button onclick="UI.changeFontSize(1)" class="text-apple-blue hover:text-white px-1 py-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                </div>
+                <div class="border-t border-white/5 pt-4">
+                    <label class="text-[12px] text-apple-label font-bold tracking-widest uppercase mb-2 block">Head Tags (CDN/Scripts)</label>
+                    <textarea id="settings-head-tags" placeholder="<script src='https://cdn.tailwindcss.com'></script>" class="w-full h-24 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-[12px] font-mono text-white/80 focus:outline-none focus:border-apple-blue transition-all shadow-[inset_0_2px_5px_rgba(0,0,0,0.5)] resize-none" spellcheck="false" onchange="Workspace.saveHeadTags(this.value)"></textarea>
+                    <p class="text-[10px] text-apple-label mt-1.5">Injected globally into the &lt;head&gt; of your app.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dialog-overlay" class="hidden fixed inset-0 modal-backdrop z-[150] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div id="dialog-box" class="vision-alert-box modal-content modal-enter flex flex-col text-center relative" onclick="event.stopPropagation()">
+            <div class="p-5 flex flex-col items-center">
+                <h3 id="dialog-title" class="text-[17px] font-bold text-white tracking-tight leading-snug">Title</h3>
+                <p id="dialog-message" class="text-[13px] text-white/70 mt-1.5 leading-snug font-medium">Message</p>
+                <input type="text" id="dialog-input" autocorrect="off" autocapitalize="none" spellcheck="false" class="hidden w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-[14px] text-white focus:outline-none focus:border-apple-blue transition-all mt-4 shadow-[inset_0_2px_5px_rgba(0,0,0,0.5)]">
+            </div>
+            <div class="flex border-t border-white/10 bg-white/5">
+                <button id="dialog-cancel" class="flex-1 py-3 text-[15px] text-apple-blue ios-btn border-r border-white/10 font-normal rounded-none bg-transparent shadow-none">Cancel</button>
+                <button id="dialog-confirm" class="flex-1 py-3 text-[15px] font-bold text-apple-blue ios-btn rounded-none bg-transparent shadow-none">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Platter -->
+    <div class="fixed top-4 md:top-8 left-1/2 transform -translate-x-1/2 z-[200] pointer-events-none w-full max-w-xs flex justify-center px-4">
+        <div id="toast" class="vision-glass px-4 py-2.5 rounded-full flex items-center gap-2.5 toast-pill border-white/20">
+            <div id="toast-icon-wrap" class="bg-apple-blue/20 p-1 rounded-full shadow-[0_0_10px_var(--sys-color)]"><i id="toast-icon" data-lucide="check" class="w-3.5 h-3.5 text-apple-blue"></i></div>
+            <span id="toast-message" class="text-[13px] font-semibold text-white tracking-tight drop-shadow-md">Success</span>
+        </div>
+    </div>
+
+    <script>
+        // --- UTILS ---
+        function timeAgo(dateParam) {
+            if (!dateParam) return null;
+            const date = typeof dateParam === 'object' ? dateParam : new Date(dateParam);
+            const seconds = Math.round((new Date() - date) / 1000);
+            const minutes = Math.round(seconds / 60);
+            const hours = Math.round(minutes / 60);
+            const days = Math.round(hours / 24);
+            if (seconds < 30) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            if (days < 7) return `${days}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        // Performance Debounce Utility
+        const debounce = (func, wait) => {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => { clearTimeout(timeout); func(...args); };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        };
+
+        // --- SYNTAX HIGHLIGHTER ---
+        const Highlighter = {
+            highlight: (code, lang) => {
+                if (!code) return '';
+                let html = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                if (lang === 'html') {
+                    html = html.replace(/(&lt;\/?)([a-zA-Z0-9-]+)(\s|&gt;)/g, '$1<span class="syn-tag">$2</span>$3');
+                    html = html.replace(/([a-zA-Z-]+)=/g, '<span class="syn-attr">$1</span>=');
+                    html = html.replace(/(&quot;.*?&quot;)/g, '<span class="syn-string">$1</span>');
+                    html = html.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="syn-comment">$1</span>');
+                } else if (lang === 'css') {
+                    html = html.replace(/([a-zA-Z-]+)\s*:/g, '<span class="syn-property">$1</span>:');
+                    html = html.replace(/:(.*?);/g, ':<span class="syn-string">$1</span>;');
+                    html = html.replace(/([\.#@][a-zA-Z0-9_-]+)/g, '<span class="syn-tag">$1</span>');
+                    html = html.replace(/\/\*[\s\S]*?\*\//g, match => `<span class="syn-comment">${match}</span>`);
+                } else if (lang === 'javascript' || lang === 'js') {
+                    const keywords = /\b(const|let|var|function|return|if|else|for|while|class|import|export|from|new|true|false|null|undefined|async|await|try|catch|window|document)\b/g;
+                    html = html.replace(keywords, '<span class="syn-keyword">$1</span>');
+                    html = html.replace(/(&quot;.*?&quot;|&#39;.*?&#39;|`.*?`)/g, '<span class="syn-string">$1</span>');
+                    html = html.replace(/\b([0-9]+)\b/g, '<span class="syn-number">$1</span>');
+                    html = html.replace(/([a-zA-Z0-9_]+)\s*\(/g, '<span class="syn-function">$1</span>(');
+                    html = html.replace(/(\/\/.*|\/\*[\s\S]*?\*\/)/g, match => `<span class="syn-comment">${match}</span>`);
+                } else if (lang === 'json') {
+                    html = html.replace(/(&quot;.*?&quot;)\s*:/g, '<span class="syn-property">$1</span>:');
+                    html = html.replace(/:\s*(&quot;.*?&quot;)/g, ': <span class="syn-string">$1</span>');
+                    html = html.replace(/:\s*([0-9\.]+)/g, ': <span class="syn-number">$1</span>');
+                    html = html.replace(/:\s*(true|false|null)/g, ': <span class="syn-keyword">$1</span>');
+                }
+                return html;
+            }
+        };
+
+        // --- SPATIAL DIALOGS ---
+        const Dialog = {
+            els: { overlay: document.getElementById('dialog-overlay'), box: document.getElementById('dialog-box'), title: document.getElementById('dialog-title'), msg: document.getElementById('dialog-message'), input: document.getElementById('dialog-input'), cancel: document.getElementById('dialog-cancel'), confirm: document.getElementById('dialog-confirm') },
+            show: (type, title, message, defaultVal = '') => new Promise((resolve) => {
+                Dialog.els.title.innerText = title; Dialog.els.msg.innerText = message;
+                if (type === 'prompt') { Dialog.els.input.classList.remove('hidden'); Dialog.els.input.value = defaultVal; } else { Dialog.els.input.classList.add('hidden'); }
+                Dialog.els.cancel.style.display = type === 'alert' ? 'none' : 'block';
+                const cleanup = () => { Dialog.els.overlay.classList.add('opacity-0'); Dialog.els.box.classList.replace('modal-active', 'modal-enter'); setTimeout(() => Dialog.els.overlay.classList.add('hidden'), 300); };
+                const finish = (val) => { cleanup(); resolve(val); };
+                Dialog.els.confirm.onclick = () => finish(type === 'prompt' ? Dialog.els.input.value : true);
+                Dialog.els.cancel.onclick = () => finish(type === 'prompt' ? null : false);
+                Dialog.els.input.onkeydown = (e) => { if (e.key === 'Enter') Dialog.els.confirm.click(); if (e.key === 'Escape') Dialog.els.cancel.click(); };
+                Dialog.els.overlay.classList.remove('hidden');
+                requestAnimationFrame(() => { Dialog.els.overlay.classList.remove('opacity-0'); Dialog.els.box.classList.replace('modal-enter', 'modal-active'); if (type === 'prompt') Dialog.els.input.focus(); });
+            }),
+            alert: (title, msg) => Dialog.show('alert', title, msg),
+            confirm: (title, msg) => Dialog.show('confirm', title, msg),
+            prompt: (title, msg, def) => Dialog.show('prompt', title, msg, def)
+        };
+
+        // --- COMMAND PALETTE ---
+        const CommandPalette = {
+            isOpen: false,
+            init: () => {
+                const overlay = document.getElementById('cmd-palette-overlay');
+                const input = document.getElementById('cmd-input');
+                overlay.addEventListener('click', (e) => { if(e.target === overlay) CommandPalette.hide(); });
+                input.addEventListener('input', () => CommandPalette.render(input.value));
+                input.addEventListener('keydown', (e) => CommandPalette.handleKey(e));
+                window.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); CommandPalette.isOpen ? CommandPalette.hide() : CommandPalette.show(); } });
+            },
+            show: () => {
+                const overlay = document.getElementById('cmd-palette-overlay');
+                const box = document.getElementById('cmd-palette-box');
+                document.getElementById('cmd-input').value = '';
+                CommandPalette.render('');
+                overlay.classList.remove('hidden');
+                requestAnimationFrame(() => { overlay.classList.remove('opacity-0'); box.classList.replace('cmd-enter', 'cmd-active'); document.getElementById('cmd-input').focus(); });
+                CommandPalette.isOpen = true;
+            },
+            hide: () => {
+                const overlay = document.getElementById('cmd-palette-overlay');
+                const box = document.getElementById('cmd-palette-box');
+                overlay.classList.add('opacity-0'); box.classList.replace('cmd-active', 'cmd-enter');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+                CommandPalette.isOpen = false;
+            },
+            render: (query) => {
+                const q = query.toLowerCase();
+                const resultsEl = document.getElementById('cmd-results');
+                let html = '';
+                const files = State.files.filter(f => f.name.toLowerCase().includes(q));
+                if (files.length > 0) {
+                    html += `<div class="text-[10px] font-bold text-apple-label px-3 py-1.5 uppercase tracking-widest">Files</div>`;
+                    files.forEach((f, i) => { html += `<div class="cmd-item flex items-center px-3 py-2.5 rounded-lg ${i===0 && q!=='' ? 'selected' : 'hover:bg-white/10'}" data-action="file" data-id="${f.id}"><div class="w-5 flex justify-center opacity-80">${UI.getIcon(f.name)}</div><span class="text-[13px] font-medium text-white ml-2">${f.name}</span></div>`; });
+                }
+                const allCmds = [
+                    { name: 'Create New File', icon: 'file-plus', action: 'new-file' }, { name: 'Format Code', icon: 'wand-2', action: 'format' },
+                    { name: 'Toggle Word Wrap', icon: 'wrap-text', action: 'wrap' }, { name: 'Clear Console', icon: 'trash-2', action: 'clear-console' },
+                    { name: 'Toggle Fullscreen Preview', icon: 'maximize', action: 'fullscreen' }, { name: 'Export Full Workspace', icon: 'download-cloud', action: 'export' },
+                    { name: 'Open Settings', icon: 'settings', action: 'settings' }, { name: 'Go to Home Dashboard', icon: 'layout-grid', action: 'home' }
+                ];
+                const cmds = allCmds.filter(c => c.name.toLowerCase().includes(q));
+                if (cmds.length > 0) {
+                    html += `<div class="text-[10px] font-bold text-apple-label px-3 py-1.5 uppercase tracking-widest mt-2">Commands</div>`;
+                    cmds.forEach(c => { html += `<div class="cmd-item flex items-center px-3 py-2.5 rounded-lg hover:bg-white/10" data-action="cmd" data-id="${c.action}"><i data-lucide="${c.icon}" class="w-3.5 h-3.5 text-apple-label mx-1"></i><span class="text-[13px] font-medium text-white ml-2.5">${c.name}</span></div>`; });
+                }
+                resultsEl.innerHTML = html || `<div class="text-center py-4 text-apple-label text-xs">No results found</div>`;
+                lucide.createIcons();
+                resultsEl.querySelectorAll('.cmd-item').forEach(item => { item.addEventListener('click', () => CommandPalette.execute(item.dataset.action, item.dataset.id)); });
+            },
+            handleKey: (e) => {
+                if (e.key === 'Escape') CommandPalette.hide();
+                if (e.key === 'Enter') { const selected = document.querySelector('.cmd-item.selected') || document.querySelector('.cmd-item'); if (selected) CommandPalette.execute(selected.dataset.action, selected.dataset.id); }
+            },
+            execute: (type, id) => {
+                CommandPalette.hide();
+                if (type === 'file') { Workspace.setActive(id); }
+                if (type === 'cmd') {
+                    if (id === 'new-file') Workspace.createFile(); if (id === 'run') Engine.run(); if (id === 'format') UI.formatCode();
+                    if (id === 'wrap') { const cb = document.getElementById('wrap-toggle-hidden'); cb.checked = !cb.checked; UI.toggleWrap(cb); }
+                    if (id === 'clear-console') Engine.clearConsole(); if (id === 'fullscreen') Preview.toggleFullscreen();
+                    if (id === 'export') Workspace.exportProject(); if (id === 'settings') UI.toggleSettings(); if (id === 'home') UI.switchView('home');
+                }
+            }
+        };
+
+        // --- TEMPLATES ---
+        const Templates = {
+            vanilla: [
+                { id: '1', name: 'index.html', language: 'html', content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Vanilla App</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="view">\n    <div class="icon">✨</div>\n    <h1>Spatial Web Studio</h1>\n    <p>Developed by Aravind. Built for the future.</p>\n    <button onclick="runTest()">Initialize Engine</button>\n  </div>\n  <script src="main.js"><\/script>\n</body>\n</html>` },
+                { id: '2', name: 'style.css', language: 'css', content: `body {\n  background: #000000; color: #FFFFFF;\n  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;\n  display: flex; justify-content: center; align-items: center;\n  min-height: 100vh; margin: 0; -webkit-font-smoothing: antialiased;\n}\n.view {\n  background: rgba(255,255,255,0.03);\n  padding: 40px; border-radius: 32px;\n  text-align: center; max-width: 340px; width: 100%;\n  backdrop-filter: blur(40px) saturate(180%);\n  border: 1px solid rgba(255,255,255,0.08);\n  box-shadow: 0 20px 60px rgba(0,0,0,0.6);\n}\n.icon {\n  font-size: 48px; margin-bottom: 16px;\n  filter: drop-shadow(0 0 15px rgba(255,255,255,0.2));\n}\nh1 {\n  font-size: 24px; font-weight: 700; margin: 0 0 8px;\n  letter-spacing: 0.3px;\n}\np {\n  color: rgba(235, 235, 245, 0.6); font-size: 14px;\n  line-height: 20px; margin-bottom: 32px;\n}\nbutton {\n  background: rgba(255,255,255,0.1); color: #FFFFFF;\n  border: 1px solid rgba(255,255,255,0.1);\n  padding: 12px 20px; border-radius: 999px; font-size: 15px;\n  font-weight: 500; width: 100%; cursor: pointer;\n  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);\n}\nbutton:hover { background: rgba(255,255,255,0.15); transform: scale(1.05); }\nbutton:active { transform: scale(0.9); opacity: 0.8; transition: all 0.1s ease-out; }` },
+                { id: '3', name: 'main.js', language: 'javascript', content: `console.info('Studio engine loaded. Crafted by Aravind.');\n\nfunction runTest() {\n  const payload = { developer: "Aravind", environment: "VisionOS", haptic: true };\n  console.log("Environment initialized natively.");\n  console.warn("Telemetry Data:", payload);\n}` }
+            ],
+            react: [
+                { id: '1', name: 'index.html', language: 'html', content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>React App</title>\n  <script src="https://unpkg.com/react@18/umd/react.development.js"><\/script>\n  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"><\/script>\n  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div id="root"></div>\n  <script type="text/babel" src="app.js"><\/script>\n</body>\n</html>` },
+                { id: '2', name: 'app.js', language: 'javascript', content: `function App() {\n  const [count, setCount] = React.useState(0);\n  \n  return (\n    <div className="container">\n      <div className="card">\n        <h1>⚛️ React Playground</h1>\n        <p>Built with NOVA Studio</p>\n        <div className="counter">{count}</div>\n        <button onClick={() => setCount(c => c + 1)}>Increment</button>\n      </div>\n    </div>\n  );\n}\n\nconst root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(<App />);` },
+                { id: '3', name: 'style.css', language: 'css', content: `body {\n  background: #0f0f11; color: #fff;\n  font-family: system-ui, sans-serif;\n  display: flex; justify-content: center;\n  align-items: center; height: 100vh; margin: 0;\n}\n.card {\n  background: #1c1c1e; padding: 40px;\n  border-radius: 20px; text-align: center;\n  border: 1px solid rgba(255,255,255,0.1);\n}\nh1 { margin: 0 0 10px; color: #61dafb; }\np { color: #8e8e93; margin-bottom: 30px; }\n.counter {\n  font-size: 48px; font-weight: bold;\n  margin-bottom: 30px; color: #fff;\n}\nbutton {\n  background: #0a84ff; color: white; border: none;\n  padding: 12px 24px; border-radius: 99px;\n  font-size: 16px; font-weight: bold; cursor: pointer;\n  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);\n}\nbutton:hover { background: #007aff; transform: scale(1.05); }\nbutton:active { transform: scale(0.9); transition: all 0.1s ease-out; }` }
+            ]
+        };
+
+        // --- APP STATE ---
+        const State = {
+            projects: {}, currentProjId: null, files: [], activeFileId: null,
+            autoRun: true, consoleLogs: [], runTimer: null, blobUrl: null, theme: 'blue',
+            viewport: 'desktop', mobileViewMode: 'editor', currentView: 'home',
+            fontSize: 16, isWrapped: false 
+        };
+
+        const Els = {
+            homeView: document.getElementById('home-view'), ideView: document.getElementById('ide-view'),
+            fileList: document.getElementById('file-list'), tabs: document.getElementById('editor-tabs'),
+            editor: document.getElementById('code-editor'), pre: document.getElementById('editor-pre'), 
+            lines: document.getElementById('line-numbers'), iframe: document.getElementById('preview-frame'),
+            consoleOut: document.getElementById('console-output'), loader: document.getElementById('loader'),
+            runBtn: document.getElementById('run-btn'), ideProjTitle: document.getElementById('ide-project-title'),
+            sidebar: document.getElementById('sidebar'), vpContainer: document.getElementById('viewport-container'),
+            activeLine: document.getElementById('active-line-highlight')
+        };
+
+        // --- VIEWPORT MANAGER ---
+        const Preview = {
+            setViewport: (mode) => {
+                State.viewport = mode;
+                if(document.fullscreenElement && mode !== 'desktop') document.exitFullscreen();
+                Els.vpContainer.className = `viewport-container viewport-${mode}`;
+                ['vp-mobile', 'vp-tablet', 'vp-desktop'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.className = `vision-btn w-7 h-7 lg:w-8 lg:h-8 p-0 rounded-full border-none shadow-none bg-transparent hover:bg-white/10 flex-shrink-0 text-apple-label hover:text-white ${id==='vp-desktop'?'hidden xl:flex':''}`;
+                });
+                const active = document.getElementById(`vp-${mode}`);
+                if(active) active.className = `vision-btn w-7 h-7 lg:w-8 lg:h-8 p-0 rounded-full border-none shadow-none bg-apple-blue/20 text-apple-blue flex-shrink-0 ${mode==='desktop'?'hidden xl:flex':''}`;
+            },
+            toggleFullscreen: () => {
+                const wrapper = document.getElementById('iframe-wrapper');
+                if (!document.fullscreenElement) {
+                    wrapper.requestFullscreen().catch(err => UI.showToast("Fullscreen denied", "error"));
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        };
+
+        // --- UI CONTROLLER ---
+        const UI = {
+            init: () => {
+                lucide.createIcons();
+                UI.setupEditor(); UI.setupSplitter(); UI.setupSidebarResizer(); 
+                UI.setupShortcuts(); UI.setupDragAndDrop(); UI.setupConsoleInput();
+                CommandPalette.init();
+                
+                // Backdrop clicks for modals
+                document.querySelectorAll('.modal-backdrop').forEach(modal => {
+                    modal.addEventListener('click', (e) => {
+                        if(e.target === modal) {
+                            if(modal.id === 'settings-overlay') UI.toggleSettings();
+                            if(modal.id === 'new-project-overlay') UI.hideNewProjectModal();
+                        }
+                    });
+                });
+                
+                document.getElementById('auto-run-toggle').addEventListener('change', (e) => {
+                    State.autoRun = e.target.checked; 
+                    UI.updateRunButtonState();
+                    if(State.autoRun) Engine.run();
+                });
+                
+                if (window.innerWidth < 768) { UI.setViewMode('editor'); } else { UI.setViewMode('split'); }
+
+                document.addEventListener('mousemove', (e) => {
+                    if (window.innerWidth < 768) return;
+                    const x = (e.clientX / window.innerWidth - 0.5) * 40;
+                    const y = (e.clientY / window.innerHeight - 0.5) * 40;
+                    document.getElementById('liquid-bg').style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                });
+
+                setTimeout(() => {
+                    const splash = document.getElementById('splash-screen');
+                    const mainApp = document.getElementById('main-app');
+                    splash.style.opacity = '0';
+                    splash.style.transform = 'scale(1.1)';
+                    mainApp.style.opacity = '1';
+                    setTimeout(() => splash.remove(), 800);
+                }, 1200);
+                
+                // Ensure save on close
+                window.addEventListener('beforeunload', () => { Workspace.saveImmediate(); });
+            },
+
+            updateRunButtonState: () => {
+                const mobileBtn = document.getElementById('run-btn-mobile');
+                if (State.autoRun) {
+                    Els.runBtn.disabled = true; Els.runBtn.classList.remove('run-pulse');
+                    Els.runBtn.className = "vision-btn px-3 lg:px-4 py-1.5 opacity-50 font-bold gap-1.5 text-[12px] flex-shrink-0 cursor-not-allowed border-none bg-transparent shadow-none";
+                    if(mobileBtn) mobileBtn.className = "vision-btn p-1.5 px-2.5 text-apple-blue opacity-50 font-bold gap-1 text-[13px] border-none bg-transparent shadow-none flex-shrink-0";
+                } else {
+                    Els.runBtn.disabled = false; Els.runBtn.classList.add('run-pulse');
+                    Els.runBtn.className = "vision-btn px-3 lg:px-4 py-1.5 text-apple-blue font-bold gap-1.5 text-[12px] flex-shrink-0 run-pulse bg-apple-blue/10 border-none";
+                    if(mobileBtn) mobileBtn.className = "vision-btn p-1.5 px-2.5 text-apple-blue font-bold gap-1 text-[13px] flex-shrink-0 run-pulse bg-apple-blue/10 border-none";
+                }
+            },
+            
+            showToast: (msg, type = 'success') => {
+                const toast = document.getElementById('toast');
+                document.getElementById('toast-message').innerText = msg;
+                const icon = document.getElementById('toast-icon');
+                const wrap = document.getElementById('toast-icon-wrap');
+                
+                if (type === 'error') {
+                    icon.setAttribute('data-lucide', 'alert-circle');
+                    icon.className = 'w-3.5 h-3.5 text-[#FF453A]';
+                    wrap.className = 'bg-[#FF453A]/20 p-1.5 rounded-full shadow-[0_0_10px_#FF453A]';
+                } else if (type === 'info') {
+                    icon.setAttribute('data-lucide', 'info');
+                    icon.className = 'w-3.5 h-3.5 text-white';
+                    wrap.className = 'bg-white/20 p-1.5 rounded-full shadow-[0_0_10px_#FFF]';
+                } else {
+                    icon.setAttribute('data-lucide', 'check');
+                    icon.className = 'w-3.5 h-3.5 text-apple-blue';
+                    wrap.className = 'bg-apple-blue/20 p-1.5 rounded-full shadow-[0_0_10px_var(--sys-color)]';
+                }
+                lucide.createIcons();
+                
+                toast.classList.add('toast-active');
+                setTimeout(() => toast.classList.remove('toast-active'), 2500);
+            },
+
+            switchView: (viewName) => {
+                State.currentView = viewName;
+                if (viewName === 'home') {
+                    Els.ideView.classList.replace('view-active', 'view-hidden');
+                    Els.homeView.classList.replace('view-hidden', 'view-active');
+                    Workspace.renderHomeGrid();
+                } else if (viewName === 'ide') {
+                    Els.homeView.classList.replace('view-active', 'view-hidden');
+                    Els.ideView.classList.replace('view-hidden', 'view-active');
+                    Workspace.loadActive();
+                }
+            },
+
+            render: () => {
+                UI.renderFiles(); UI.renderTabs();
+                const active = State.files.find(f => f.id === State.activeFileId);
+                if (active) {
+                    if (Els.editor.value !== active.content) Els.editor.value = active.content;
+                    Els.pre.innerHTML = Highlighter.highlight(active.content, active.language);
+                } else { Els.editor.value = ''; Els.pre.innerHTML = ''; }
+                UI.updateLines(); lucide.createIcons();
+            },
+
+            getIcon: (name) => {
+                if (name.endsWith('.html')) return '<i data-lucide="file-code-2" class="w-4 h-4 md:w-4.5 md:h-4.5 text-[#FF7AB2] drop-shadow-sm"></i>';
+                if (name.endsWith('.css')) return '<i data-lucide="paintbrush-2" class="w-4 h-4 md:w-4.5 md:h-4.5 text-[#5DD8FF] drop-shadow-sm"></i>';
+                if (name.endsWith('.js')) return '<i data-lucide="file-terminal" class="w-4 h-4 md:w-4.5 md:h-4.5 text-[#FFD60A] drop-shadow-sm"></i>';
+                if (name.endsWith('.json')) return '<i data-lucide="braces" class="w-4 h-4 md:w-4.5 md:h-4.5 text-[#32D74B] drop-shadow-sm"></i>';
+                return '<i data-lucide="file-text" class="w-4 h-4 md:w-4.5 md:h-4.5 text-apple-label"></i>';
+            },
+
+            renderFiles: () => {
+                Els.fileList.innerHTML = State.files.map(f => `
+                    <div onclick="Workspace.setActive('${f.id}'); window.innerWidth < 768 ? UI.toggleMobileSidebar() : null" class="vision-card flex items-center px-3 py-2.5 cursor-pointer group rounded-[12px] mb-1 ${State.activeFileId === f.id ? 'bg-white/10 border border-white/10 shadow-sm' : 'bg-transparent border border-transparent hover:bg-white/5'}">
+                        <div class="mr-3 opacity-90 flex-shrink-0">${UI.getIcon(f.name)}</div>
+                        <span class="text-[13px] font-medium flex-1 truncate tracking-wide ${State.activeFileId === f.id ? 'text-white' : 'text-apple-label group-hover:text-white'}">${f.name}</span>
+                    </div>
+                `).join('');
+            },
+
+            renderTabs: () => {
+                Els.tabs.innerHTML = State.files.map(f => `
+                    <div onclick="Workspace.setActive('${f.id}')" class="group relative flex items-center h-full px-3 cursor-pointer md:rounded-t-xl transition-colors border-r border-white/5 min-w-[100px] max-w-[160px] flex-shrink-0 ${State.activeFileId === f.id ? 'bg-[#0A0A0C] text-white border-t border-white/5' : 'text-apple-label hover:bg-white/5'}">
+                        <span class="mr-2 opacity-80 flex-shrink-0">${UI.getIcon(f.name)}</span>
+                        <span class="text-[12px] font-medium truncate flex-1 min-w-0 pr-6" ondblclick="Workspace.renameFile(event, '${f.id}')">${f.name}</span>
+                        <button onclick="Workspace.deleteFile(event, '${f.id}')" class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 hover:text-[#FF453A] ios-btn p-1 flex-shrink-0 ${State.activeFileId === f.id ? 'opacity-60' : ''}"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                `).join('');
+            },
+
+            updateLines: () => {
+                const lines = Els.editor.value.split('\n').length;
+                Els.lines.innerHTML = Array.from({ length: lines || 1 }).map((_, i) => `<div>${i + 1}</div>`).join('');
+                UI.updateActiveLine();
+            },
+
+            updateActiveLine: () => {
+                if(!Els.activeLine) return;
+                const linesUntilCursor = Els.editor.value.substr(0, Els.editor.selectionStart).split("\n").length;
+                const baseFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                const paddingTop = 1.5 * baseFontSize; 
+                const editorFontSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--editor-font-size')) || 16;
+                const lineHeight = 1.75 * editorFontSize; 
+                
+                const topOffset = paddingTop + ((linesUntilCursor - 1) * lineHeight);
+                Els.activeLine.style.top = `${topOffset}px`;
+                Els.activeLine.classList.remove('hidden');
+            },
+
+            pulseSave: () => {
+                const activeTab = document.querySelector('#editor-tabs > div.bg-\\[\\#0A0A0C\\]');
+                if(activeTab) {
+                    activeTab.classList.remove('saving-pulse');
+                    void activeTab.offsetWidth; 
+                    activeTab.classList.add('saving-pulse');
+                }
+            },
+
+            formatCode: () => {
+                const f = State.files.find(x => x.id === State.activeFileId);
+                if (!f) return;
+                
+                let code = f.content;
+                let indent = 0;
+                let formatted = '';
+                
+                const lines = code.replace(/{/g, '{\n').replace(/}/g, '\n}').replace(/;/g, ';\n').split('\n');
+                
+                for(let line of lines) {
+                    line = line.trim();
+                    if(line.length === 0) continue;
+                    if(line.includes('}')) indent = Math.max(0, indent - 1);
+                    formatted += '  '.repeat(indent) + line + '\n';
+                    if(line.includes('{')) indent++;
+                }
+                
+                f.content = formatted.trim();
+                UI.render();
+                UI.showToast("Code Formatted", "info");
+                if(State.autoRun) Engine.run();
+            },
+
+            setupEditor: () => {
+                Els.editor.addEventListener('input', (e) => {
+                    const f = State.files.find(x => x.id === State.activeFileId);
+                    if(f) {
+                        f.content = e.target.value;
+                        Els.pre.innerHTML = Highlighter.highlight(f.content, f.language);
+                        UI.updateLines(); 
+                        
+                        Workspace.save();
+                        UI.pulseSave();
+                        
+                        // DEBOUNCE - INCREASED to 1200ms for stable iPad typing
+                        if (State.autoRun) { 
+                            clearTimeout(State.runTimer); if(Els.loader) Els.loader.style.display = 'block'; 
+                            State.runTimer = setTimeout(Engine.run, 1200); 
+                        } else {
+                            Els.runBtn.classList.add('run-pulse');
+                            const mobileBtn = document.getElementById('run-btn-mobile');
+                            if(mobileBtn) mobileBtn.classList.add('run-pulse');
+                        }
+                    }
+                });
+
+                // PASSIVE EVENT LISTENER FOR 60FPS SCROLLING ON iOS
+                Els.editor.addEventListener('scroll', () => { 
+                    window.requestAnimationFrame(() => {
+                        Els.lines.scrollTop = Els.editor.scrollTop; 
+                        Els.pre.scrollTop = Els.editor.scrollTop; 
+                        Els.pre.scrollLeft = Els.editor.scrollLeft;
+                        if(Els.activeLine) {
+                            Els.activeLine.style.transform = `translateY(-${Els.editor.scrollTop}px)`;
+                        }
+                    });
+                }, { passive: true });
+
+                Els.editor.addEventListener('click', UI.updateActiveLine);
+                Els.editor.addEventListener('keyup', UI.updateActiveLine);
+
+                // Smart Auto-Indentation & Bracket Closing Engine
+                Els.editor.addEventListener('keydown', (e) => {
+                    const val = Els.editor.value;
+                    const start = Els.editor.selectionStart;
+                    const end = Els.editor.selectionEnd;
+                    
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        Els.editor.value = val.substring(0, start) + "  " + val.substring(end);
+                        Els.editor.selectionStart = Els.editor.selectionEnd = start + 2;
+                        Els.editor.dispatchEvent(new Event('input'));
+                    } 
+                    else if (['(', '{', '[', '"', "'"].includes(e.key)) {
+                        const pairs = { '(': ')', '{': '}', '[': ']', '"': '"', "'": "'" };
+                        e.preventDefault();
+                        Els.editor.value = val.substring(0, start) + e.key + pairs[e.key] + val.substring(end);
+                        Els.editor.selectionStart = Els.editor.selectionEnd = start + 1;
+                        Els.editor.dispatchEvent(new Event('input'));
+                    }
+                    else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const linesBefore = val.substring(0, start).split('\n');
+                        const currentLine = linesBefore[linesBefore.length - 1];
+                        const indentMatch = currentLine.match(/^\s*/);
+                        let indent = indentMatch ? indentMatch[0] : '';
+
+                        if (currentLine.trim().endsWith('{') || currentLine.trim().endsWith('[')) {
+                            const nextIndent = indent;
+                            indent += '  '; 
+                            Els.editor.value = val.substring(0, start) + '\n' + indent + '\n' + nextIndent + val.substring(end);
+                            Els.editor.selectionStart = Els.editor.selectionEnd = start + indent.length + 1;
+                        } else {
+                            Els.editor.value = val.substring(0, start) + '\n' + indent + val.substring(end);
+                            Els.editor.selectionStart = Els.editor.selectionEnd = start + indent.length + 1;
+                        }
+                        Els.editor.dispatchEvent(new Event('input'));
+                    }
+                });
+            },
+
+            setupSidebarResizer: () => {
+                const resizer = document.getElementById('sidebar-resizer');
+                if(!resizer) return;
+                let isResizing = false;
+                resizer.addEventListener('mousedown', () => { isResizing = true; resizer.classList.add('active'); });
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+                    let newWidth = e.clientX;
+                    if (newWidth > 200 && newWidth < 500) {
+                        document.documentElement.style.setProperty('--sidebar-width', newWidth + 'px');
+                    }
+                });
+                document.addEventListener('mouseup', () => { isResizing = false; resizer.classList.remove('active'); });
+            },
+
+            setupSplitter: () => {
+                let drag = false; const resizer = document.getElementById('resizer');
+                const es = document.getElementById('editor-section'); const ps = document.getElementById('preview-section');
+                
+                const startDrag = () => { drag = true; resizer.classList.add('dragging'); document.body.style.cursor = 'col-resize'; Els.iframe.style.pointerEvents = 'none'; };
+                const onDrag = (e) => {
+                    if (!drag) return;
+                    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                    const w = document.getElementById('workspace-container').getBoundingClientRect();
+                    let nw = ((clientX - w.left) / w.width) * 100;
+                    if (nw < 20) nw = 20; if (nw > 80) nw = 80;
+                    es.style.width = `${nw}%`; ps.style.width = `${100 - nw}%`;
+                };
+                const stopDrag = () => { if (drag) { drag = false; resizer.classList.remove('dragging'); document.body.style.cursor = 'default'; Els.iframe.style.pointerEvents = 'auto'; } };
+
+                resizer.addEventListener('mousedown', startDrag); resizer.addEventListener('touchstart', startDrag, {passive: true});
+                document.addEventListener('mousemove', onDrag); document.addEventListener('touchmove', (e) => { if(drag) { e.preventDefault(); onDrag(e); } }, {passive: false});
+                document.addEventListener('mouseup', stopDrag); document.addEventListener('touchend', stopDrag);
+            },
+
+            setupDragAndDrop: () => {
+                const zone = document.getElementById('drop-zone');
+                const box = document.getElementById('drop-box');
+                window.addEventListener('dragover', (e) => { 
+                    e.preventDefault(); 
+                    zone.classList.replace('opacity-0', 'opacity-100'); 
+                    zone.classList.replace('pointer-events-none', 'pointer-events-auto');
+                    box.classList.replace('scale-95', 'scale-100');
+                });
+                window.addEventListener('dragleave', (e) => { 
+                    if(e.target === zone) {
+                        zone.classList.replace('opacity-100', 'opacity-0'); 
+                        zone.classList.replace('pointer-events-auto', 'pointer-events-none');
+                        box.classList.replace('scale-100', 'scale-95');
+                    }
+                });
+                window.addEventListener('drop', (e) => {
+                    e.preventDefault(); 
+                    zone.classList.replace('opacity-100', 'opacity-0'); 
+                    zone.classList.replace('pointer-events-auto', 'pointer-events-none');
+                    box.classList.replace('scale-100', 'scale-95');
+                    
+                    if (e.dataTransfer.files.length > 0) {
+                        const creatingNew = State.currentView === 'home';
+                        let newProjId = null;
+                        
+                        if (creatingNew) {
+                            newProjId = 'proj_' + Date.now();
+                            Workspace.saveImmediate(); // Force save before creating
+                            State.projects[newProjId] = { id: newProjId, name: 'Spatial Import', files: [], updated: Date.now() };
+                        }
+
+                        Array.from(e.dataTransfer.files).forEach(file => {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                                if (creatingNew) { Workspace.importFileTo(file.name, ev.target.result, newProjId); } 
+                                else { Workspace.importFile(file.name, ev.target.result); }
+                            };
+                            reader.readAsText(file);
+                        });
+
+                        if (creatingNew) { setTimeout(() => { Workspace.openProj(newProjId); UI.showToast("Imported successfully"); }, 100); }
+                    }
+                });
+            },
+
+            setupConsoleInput: () => {
+                const input = document.getElementById('console-input');
+                if(!input) return;
+                input.addEventListener('keydown', (e) => {
+                    if(e.key === 'Enter') {
+                        UI.executeConsole();
+                    }
+                });
+            },
+            
+            executeConsole: () => {
+                const input = document.getElementById('console-input');
+                const code = input.value.trim();
+                if(code) {
+                    Els.iframe.contentWindow.postMessage({ source: 'nova-console', type: 'eval', code: code }, '*');
+                    input.value = '';
+                }
+            },
+
+            setupShortcuts: () => {
+                window.addEventListener('keydown', (e) => {
+                    // Cmd/Ctrl + S
+                    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); Engine.run(); UI.showToast("Saved & Built"); }
+                    // Cmd/Ctrl + B
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); UI.toggleDesktopSidebar(); }
+                    // Cmd/Ctrl + Shift + F
+                    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); UI.formatCode(); }
+                });
+                const mobileRun = document.getElementById('run-btn-mobile');
+                if(mobileRun) mobileRun.addEventListener('click', () => { if(!State.autoRun) Engine.run(); });
+            },
+
+            setViewMode: (m) => {
+                const modes = ['editor', 'split', 'preview'];
+                
+                const pill = document.getElementById('segment-pill');
+                const activeBtn = document.getElementById(`btn-view-${m}`);
+                if (pill && activeBtn) {
+                    pill.style.width = activeBtn.offsetWidth + 'px';
+                    pill.style.transform = `translateX(${activeBtn.offsetLeft - 4}px)`;
+                }
+
+                ['btn-view-editor', 'btn-view-split', 'btn-view-preview'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) { el.classList.remove('active'); }
+                });
+                if(activeBtn) { activeBtn.classList.add('active'); }
+                
+                const es = document.getElementById('editor-section'); const ps = document.getElementById('preview-section'); const r = document.getElementById('resizer');
+                
+                if (window.innerWidth < 768) {
+                    es.style.display = (m === 'editor') ? 'flex' : 'none';
+                    ps.style.display = (m === 'preview') ? 'flex' : 'none';
+                    if(m === 'split') { UI.showToast("Rotate device for split view","error"); return; }
+                    es.style.width = '100%'; ps.style.width = '100%'; r.style.display = 'none';
+                    State.mobileViewMode = m;
+                } else {
+                    es.style.display = (m === 'split' || m === 'editor') ? 'flex' : 'none';
+                    ps.style.display = (m === 'split' || m === 'preview') ? 'flex' : 'none';
+                    r.style.display = m === 'split' ? 'flex' : 'none';
+                    if(m === 'split') { es.style.width = '50%'; ps.style.width = '50%'; } else { es.style.width = '100%'; ps.style.width = '100%'; }
+                }
+            },
+
+            toggleMobileView: () => {
+                const nextMode = State.mobileViewMode === 'editor' ? 'preview' : 'editor';
+                UI.setViewMode(nextMode);
+            },
+
+            toggleMobileSidebar: () => {
+                const s = Els.sidebar; const o = document.getElementById('sidebar-overlay');
+                if (s.classList.contains('-translate-x-full')) {
+                    s.classList.remove('-translate-x-full'); o.classList.remove('hidden'); requestAnimationFrame(()=>o.classList.remove('opacity-0'));
+                } else {
+                    s.classList.add('-translate-x-full'); o.classList.add('opacity-0'); setTimeout(()=>o.classList.add('hidden'), 400);
+                }
+            },
+
+            toggleDesktopSidebar: () => {
+                if(window.innerWidth < 768) return;
+                const isHidden = Els.sidebar.style.display === 'none';
+                Els.sidebar.style.display = isHidden ? 'flex' : 'none';
+            },
+
+            showNewProjectModal: () => {
+                const s = document.getElementById('new-project-overlay');
+                const box = document.getElementById('new-project-box');
+                document.getElementById('new-proj-name').value = '';
+                s.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    s.classList.remove('opacity-0');
+                    box.classList.replace('modal-enter', 'modal-active');
+                    document.getElementById('new-proj-name').focus();
+                });
+            },
+            
+            hideNewProjectModal: () => {
+                const s = document.getElementById('new-project-overlay');
+                const box = document.getElementById('new-project-box');
+                s.classList.add('opacity-0');
+                box.classList.replace('modal-active', 'modal-enter');
+                setTimeout(() => s.classList.add('hidden'), 300);
+            },
+
+            toggleSettings: () => {
+                const s = document.getElementById('settings-overlay');
+                const box = document.getElementById('settings-box');
+                if(s.classList.contains('hidden')) {
+                    const currentTags = State.projects[State.currentProjId]?.headTags || '';
+                    document.getElementById('settings-head-tags').value = currentTags;
+                    
+                    s.classList.remove('hidden');
+                    requestAnimationFrame(() => {
+                        s.classList.remove('opacity-0');
+                        box.classList.replace('modal-enter', 'modal-active');
+                    });
+                } else {
+                    s.classList.add('opacity-0');
+                    box.classList.replace('modal-active', 'modal-enter');
+                    setTimeout(() => s.classList.add('hidden'), 300);
+                }
+            },
+
+            changeFontSize: (delta) => {
+                State.fontSize = Math.max(10, Math.min(24, State.fontSize + delta));
+                document.documentElement.style.setProperty('--editor-font-size', `${State.fontSize}px`);
+                document.getElementById('font-size-display').innerText = State.fontSize;
+                UI.updateActiveLine();
+            },
+
+            toggleWrap: (el) => {
+                State.isWrapped = el.checked;
+                document.documentElement.style.setProperty('--editor-wrap', State.isWrapped ? 'pre-wrap' : 'pre');
+                const checkbox = document.getElementById('wrap-toggle');
+                const hiddenCb = document.getElementById('wrap-toggle-hidden');
+                if(checkbox) checkbox.checked = State.isWrapped;
+                if(hiddenCb) hiddenCb.checked = State.isWrapped;
+                
+                UI.updateActiveLine();
+                UI.showToast(State.isWrapped ? "Word Wrap Enabled" : "Word Wrap Disabled", "info");
+            }
+        };
+
+        // --- DATA LAYER (Debounced & Deep Cloned) ---
+        const Workspace = {
+            saveTimeout: null,
+            
+            init: () => {
+                try {
+                    const s = localStorage.getItem('nova_spatial_master');
+                    if (s) { State.projects = JSON.parse(s); State.currentProjId = localStorage.getItem('nova_spatial_proj_master') || Object.keys(State.projects)[0]; }
+                } catch (e) {}
+
+                if (!State.projects || Object.keys(State.projects).length === 0) {
+                    const id = 'proj_' + Date.now();
+                    State.projects = { [id]: { id, name: 'Vanilla Demo', files: JSON.parse(JSON.stringify(Templates.vanilla)), headTags: '', updated: Date.now() } };
+                    State.currentProjId = id; Workspace.saveImmediate();
+                }
+                
+                UI.switchView('home');
+            },
+
+            // DEBOUNCED SAVE (Improves mobile typing performance)
+            save: () => {
+                clearTimeout(Workspace.saveTimeout);
+                Workspace.saveTimeout = setTimeout(() => { Workspace.saveImmediate(); }, 600);
+            },
+            
+            saveImmediate: () => {
+                try {
+                    if (State.currentProjId && State.projects[State.currentProjId] && State.currentView === 'ide') {
+                        // Deep clone to prevent references breaking
+                        State.projects[State.currentProjId].files = JSON.parse(JSON.stringify(State.files));
+                        State.projects[State.currentProjId].updated = Date.now();
+                    }
+                    localStorage.setItem('nova_spatial_master', JSON.stringify(State.projects));
+                    localStorage.setItem('nova_spatial_proj_master', State.currentProjId);
+                } catch (e) { console.error(e); }
+            },
+
+            loadActive: () => {
+                const p = State.projects[State.currentProjId];
+                if (!p) return;
+                // Deep clone loading
+                State.files = JSON.parse(JSON.stringify(p.files || [])); 
+                State.activeFileId = State.files.length > 0 ? State.files[0].id : null;
+                
+                const ideTitle = document.getElementById('ide-project-title');
+                const mobTitle = document.getElementById('mobile-project-title');
+                if(ideTitle) ideTitle.innerText = p.name;
+                if(mobTitle) mobTitle.innerText = p.name;
+                UI.render(); Engine.run();
+                
+                setTimeout(() => { if (window.innerWidth >= 768) UI.setViewMode('split'); else UI.setViewMode('editor'); }, 50);
+            },
+
+            setActive: (id) => { State.activeFileId = id; UI.render(); },
+
+            confirmCreateProject: () => {
+                const nameInput = document.getElementById('new-proj-name').value;
+                const template = document.getElementById('new-proj-template').value;
+                const finalName = nameInput.trim() || 'Untitled Workspace';
+                
+                const id = 'proj_' + Date.now();
+                const clonedFiles = JSON.parse(JSON.stringify(Templates[template]));
+                
+                Workspace.saveImmediate(); // Ensure old project is safely written
+                
+                State.projects[id] = { id, name: finalName, files: clonedFiles, headTags: '', updated: Date.now() };
+                
+                UI.hideNewProjectModal();
+                Workspace.openProj(id); 
+                UI.showToast(`Created ${template === 'react' ? 'React' : 'Vanilla'} Workspace`);
+            },
+
+            openProj: (id) => {
+                Workspace.saveImmediate(); 
+                State.currentProjId = id;
+                localStorage.setItem('nova_spatial_proj_master', id);
+                UI.switchView('ide');
+            },
+
+            renderHomeGrid: () => {
+                const sorted = Object.values(State.projects).sort((a,b) => b.updated - a.updated);
+                const grid = document.getElementById('home-project-grid');
+                
+                grid.innerHTML = sorted.map((p, index) => {
+                    const gradClass = `proj-gradient-${index % 5}`;
+                    const timeString = timeAgo(p.updated);
+                    const delay = index * 0.05; 
+                    
+                    return `
+                    <div class="vision-card animate-stagger vision-glass rounded-[1.5rem] overflow-hidden flex flex-col h-[180px] md:h-[200px] border border-white/10" style="animation-delay: ${delay}s" onclick="Workspace.openProj('${p.id}')">
+                        <div class="h-[75px] md:h-[80px] ${gradClass} relative flex items-center justify-start px-5 border-b border-white/20">
+                            <div class="w-10 h-10 md:w-12 md:h-12 bg-apple-blue rounded-[10px] md:rounded-xl flex items-center justify-center text-white shadow-md border border-white/20">
+                                <i data-lucide="layers" class="w-5 h-5 md:w-6 md:h-6"></i>
+                            </div>
+                        </div>
+                        <div class="p-4 md:p-5 flex-1 flex flex-col justify-between bg-black/20">
+                            <div class="min-w-0">
+                                <h3 class="text-white text-[15px] md:text-[17px] font-bold truncate mb-0.5 text-shadow-sm">${p.name}</h3>
+                                <p class="text-[12px] md:text-[13px] text-apple-label font-medium truncate">${p.files.length} items • Edited ${timeString}</p>
+                            </div>
+                            <div class="flex items-center justify-end gap-1 md:gap-2 mt-2 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                                <button onclick="event.stopPropagation(); Workspace.renameProj('${p.id}')" class="vision-btn w-8 h-8 p-0 rounded-full border-none shadow-none bg-white/10 hover:bg-white/20 text-white" title="Rename"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="event.stopPropagation(); Workspace.exportHomeProj('${p.id}')" class="vision-btn w-8 h-8 p-0 rounded-full border-none shadow-none bg-white/10 hover:bg-white/20 text-white" title="Export Full Project"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="event.stopPropagation(); Workspace.deleteProj('${p.id}')" class="vision-btn w-8 h-8 p-0 rounded-full border-none shadow-none bg-red-500/20 hover:bg-red-500/40 text-[#FF453A]" title="Delete"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+                
+                if(sorted.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-center py-20 animate-stagger"><i data-lucide="layers" class="w-14 h-14 text-white/20 mx-auto mb-4"></i><h3 class="text-lg font-bold text-white mb-2">No Workspaces</h3><p class="text-[14px] text-apple-label">Create a new workspace to get started.</p></div>`;
+                }
+                lucide.createIcons();
+            },
+
+            renameProj: async (id) => {
+                const name = await Dialog.prompt("Rename Workspace", "Enter a new name:", State.projects[id].name);
+                if (name && name.trim()) { 
+                    State.projects[id].name = name.trim(); Workspace.saveImmediate(); Workspace.renderHomeGrid(); 
+                    if(State.currentProjId === id) {
+                        const ideTitle = document.getElementById('ide-project-title');
+                        const mobTitle = document.getElementById('mobile-project-title');
+                        if(ideTitle) ideTitle.innerText = name.trim();
+                        if(mobTitle) mobTitle.innerText = name.trim();
+                    } 
+                }
+            },
+
+            deleteProj: async (id) => {
+                if (Object.keys(State.projects).length <= 1) return Dialog.alert("Action Denied", "You must have at least one workspace.");
+                if (await Dialog.confirm("Delete Workspace", `Delete "${State.projects[id].name}" permanently?`)) {
+                    delete State.projects[id];
+                    if (State.currentProjId === id) { State.currentProjId = Object.keys(State.projects)[0]; }
+                    Workspace.saveImmediate(); Workspace.renderHomeGrid(); UI.showToast("Deleted");
+                }
+            },
+
+            createFile: async () => {
+                const name = await Dialog.prompt("New File", "Enter file name:", "script.js");
+                if (name && name.trim()) {
+                    const ext = name.split('.').pop().toLowerCase();
+                    const f = { id: Date.now().toString(), name: name.trim(), language: ext === 'js' ? 'javascript' : ext, content: '' };
+                    State.files.push(f); State.activeFileId = f.id; Workspace.saveImmediate(); UI.render();
+                }
+            },
+
+            importFile: (name, content) => { Workspace.importFileTo(name, content, State.currentProjId); },
+
+            importFileTo: (name, content, targetProjId) => {
+                const ext = name.split('.').pop().toLowerCase();
+                const validExts = ['html', 'css', 'js', 'json', 'txt'];
+                if(!validExts.includes(ext)) return UI.showToast(`Unsupported file type: .${ext}`, "error");
+
+                const targetProj = State.projects[targetProjId];
+                if(!targetProj) return;
+
+                let existing = targetProj.files.find(f => f.name === name);
+                if (existing) {
+                    existing.content = content; 
+                    if(State.currentView === 'ide' && State.currentProjId === targetProjId) State.activeFileId = existing.id;
+                } else {
+                    const f = { id: Date.now().toString() + Math.random(), name: name, language: ext === 'js' ? 'javascript' : ext, content: content };
+                    targetProj.files.push(f);
+                    if(State.currentView === 'ide' && State.currentProjId === targetProjId) State.activeFileId = f.id;
+                }
+                
+                targetProj.updated = Date.now();
+                Workspace.saveImmediate(); 
+                
+                if (State.currentView === 'ide' && State.currentProjId === targetProjId) {
+                    UI.render(); UI.showToast(`${name} imported`, "info");
+                    if(State.autoRun) Engine.run();
+                }
+            },
+
+            renameFile: async (e, id) => {
+                e.stopPropagation(); const f = State.files.find(x => x.id === id);
+                const name = await Dialog.prompt("Rename File", "Enter new name:", f.name);
+                if (name && name.trim()) { 
+                    f.name = name.trim(); 
+                    f.language = f.name.split('.').pop().toLowerCase() === 'js' ? 'javascript' : f.name.split('.').pop().toLowerCase();
+                    Workspace.saveImmediate(); UI.render(); 
+                }
+            },
+
+            deleteFile: async (e, id) => {
+                e.stopPropagation();
+                if (State.files.length <= 1) return Dialog.alert("Action Denied", "Cannot delete the last file in the workspace.");
+                const f = State.files.find(x => x.id === id);
+                if (await Dialog.confirm("Delete File", `Delete "${f.name}"?`)) {
+                    State.files = State.files.filter(x => x.id !== id);
+                    if (State.activeFileId === id) State.activeFileId = State.files[0].id;
+                    Workspace.saveImmediate(); UI.render();
+                }
+            },
+            
+            saveHeadTags: (val) => {
+                if(State.projects[State.currentProjId]) {
+                    State.projects[State.currentProjId].headTags = val;
+                    Workspace.saveImmediate();
+                    if(State.autoRun) Engine.run();
+                }
+            },
+            
+            copyContent: async () => { try { await navigator.clipboard.writeText(Els.editor.value); UI.showToast("Copied to clipboard", "info"); } catch(e){ UI.showToast("Copy failed", "error"); } },
+
+            downloadCurrentFile: () => {
+                const f = State.files.find(x => x.id === State.activeFileId);
+                if(!f) return;
+                const blob = new Blob([f.content], { type: 'text/plain' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+                a.download = f.name; a.click(); URL.revokeObjectURL(a.href);
+                UI.showToast("File Downloaded");
+            },
+            
+            exportHomeProj: (id) => {
+                const p = State.projects[id];
+                const html = p.files.find(f => f.name === 'index.html')?.content || '';
+                const css = p.files.filter(f => f.name.endsWith('.css')).map(f => f.content).join('\n');
+                const js = p.files.filter(f => f.name.endsWith('.js')).map(f => f.content).join('\n');
+                const customHead = p.headTags || '';
+                
+                const doc = `<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n${customHead}\n<style>${css}</style>\n</head>\n<body>\n${html}\n<script>${js}<\/script>\n</body>\n</html>`;
+                
+                const blob = new Blob([doc], { type: 'text/html' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+                a.download = `${p.name.replace(/\s+/g,'-')}.html`;
+                a.click(); URL.revokeObjectURL(a.href); UI.showToast("Workspace Exported", "info");
+            },
+
+            exportProject: () => { Workspace.exportHomeProj(State.currentProjId); },
+            openNewTab: () => { if(State.blobUrl) window.open(State.blobUrl, '_blank'); else { Engine.run(); setTimeout(()=>window.open(State.blobUrl, '_blank'), 500); } }
+        };
+
+        // --- COMPILER ENGINE ---
+        const Engine = {
+            getDoc: () => {
+                const p = State.projects[State.currentProjId];
+                const html = State.files.find(f => f.name === 'index.html')?.content || State.files.filter(f=>f.name.endsWith('.html'))[0]?.content || '';
+                const css = State.files.filter(f => f.name.endsWith('.css')).map(f => f.content).join('\n');
+                const js = State.files.filter(f => f.name.endsWith('.js')).map(f => f.content).join('\n');
+                const customHead = p?.headTags || '';
+
+                return `<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">\n${customHead}\n<style>${css}</style>\n<script>\nwindow.onerror=function(m,u,l){window.parent.postMessage({src:'nova',type:'error',msg:m+' (Line: '+l+')'},'*');return false;};\nconst ol=console.log,ow=console.warn,oe=console.error,oi=console.info;\nfunction fmt(a){return Array.from(a).map(x=>{if(typeof x==='object'){try{return JSON.stringify(x,null,2)}catch(e){return String(x)}}return String(x)}).join(' ')}\nconsole.log=function(...a){window.parent.postMessage({src:'nova',type:'log',msg:fmt(a)},'*');ol.apply(console,a)};\nconsole.warn=function(...a){window.parent.postMessage({src:'nova',type:'warn',msg:fmt(a)},'*');ow.apply(console,a)};\nconsole.error=function(...a){window.parent.postMessage({src:'nova',type:'error',msg:fmt(a)},'*');oe.apply(console,a)};\nconsole.info=function(...a){window.parent.postMessage({src:'nova',type:'info',msg:fmt(a)},'*');oi.apply(console,a)};\n\nwindow.addEventListener('message', e => { if(e.data.source==='nova-console' && e.data.type==='eval') { try{ const res=eval(e.data.code); console.log(res); }catch(err){console.error(err.message);} } });\n<\/script>\n</head>\n<body>\n${html}\n<script>${js}<\/script>\n</body>\n</html>`;
+            },
+            run: () => {
+                if (Els.loader) Els.loader.style.display = 'block'; 
+                Engine.clearConsole();
+                Els.runBtn.classList.remove('run-pulse');
+                const mobileBtn = document.getElementById('run-btn-mobile');
+                if (mobileBtn) mobileBtn.classList.remove('run-pulse');
+                
+                const blob = new Blob([Engine.getDoc()], { type: 'text/html' });
+                if (State.blobUrl) URL.revokeObjectURL(State.blobUrl);
+                State.blobUrl = URL.createObjectURL(blob);
+                Els.iframe.src = State.blobUrl;
+                setTimeout(() => { if (Els.loader) Els.loader.style.display = 'none'; if(!State.autoRun) UI.showToast("Compiled Successfully"); }, 400);
+            },
+            handleMessage: (e) => {
+                if (e.data && e.data.src === 'nova') {
+                    State.consoleLogs.push({ type: e.data.type, msg: e.data.msg, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) });
+                    Engine.renderConsole();
+                }
+            },
+            renderConsole: () => {
+                if (!State.consoleLogs.length) { Els.consoleOut.innerHTML = '<div class="text-apple-label italic opacity-50 text-center mt-4 text-[12px]">No Output</div>'; return; }
+                Els.consoleOut.innerHTML = State.consoleLogs.map(l => {
+                    let st = 'text-white', ic = '<i data-lucide="chevron-right" class="w-3 h-3 text-apple-label mt-0.5"></i>';
+                    if(l.type==='error'){ st='text-[#FF453A]'; ic='<i data-lucide="x-circle" class="w-3.5 h-3.5 text-[#FF453A] mt-0.5"></i>'; }
+                    if(l.type==='warn'){ st='text-[#FFD60A]'; ic='<i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-[#FFD60A] mt-0.5"></i>'; }
+                    if(l.type==='info'){ st='text-apple-blue'; ic='<i data-lucide="info" class="w-3.5 h-3.5 text-apple-blue mt-0.5"></i>'; }
+                    const msg = l.msg.includes('\n') ? `<pre class="mt-1 font-mono text-[11px] bg-black/40 p-2.5 rounded-lg border border-white/5 overflow-x-auto shadow-inner">${l.msg}</pre>` : `<span>${l.msg}</span>`;
+                    return `<div class="flex gap-2 items-start border-b border-white/5 py-1.5 break-words">${ic}<div class="flex-1 min-w-0 ${st}">${msg}</div><span class="text-apple-label text-[9px] mt-1 whitespace-nowrap font-medium">${l.time}</span></div>`;
+                }).join('');
+                lucide.createIcons(); Els.consoleOut.scrollTop = Els.consoleOut.scrollHeight;
+            },
+            clearConsole: () => { State.consoleLogs = []; Engine.renderConsole(); }
+        };
+
+        // --- THEME ENGINE ---
+        function setTheme(t) { 
+            document.body.classList.add('theme-transitioning');
+            document.documentElement.className = `dark theme-${t}`; 
+            State.theme = t; 
+            setTimeout(() => document.body.classList.remove('theme-transitioning'), 1000);
+        }
+
+        // Boot
+        window.addEventListener('message', Engine.handleMessage);
+        UI.init(); Workspace.init();
+    </script>
+</body>
+</html>
